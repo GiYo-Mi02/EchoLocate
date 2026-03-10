@@ -1,0 +1,2 @@
+Placeholder — replace with your trained .tflite model.
+Run: python scripts/train_model.py
