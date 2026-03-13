@@ -17,7 +17,14 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "EchoLocate needs location access to display your position on the offline map."
+        "NSLocationWhenInUseUsageDescription": "EchoLocate needs location access to display your position on the offline map.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "EchoLocate uses location in the background to keep rescue broadcasts active.",
+        "NSBluetoothAlwaysUsageDescription": "EchoLocate uses Bluetooth to discover nearby devices during rescue operations.",
+        "UIBackgroundModes": [
+          "bluetooth-central",
+          "bluetooth-peripheral",
+          "location"
+        ]
       }
     },
     "android": {
@@ -26,16 +33,41 @@
         "backgroundColor": "#1a1a2e"
       },
       "permissions": [
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_ADVERTISE",
         "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "VIBRATE"
-      ]
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_ADVERTISE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      "package": "com.giyomi02.echolocate"
     },
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "EchoLocate needs location to show your position on the offline map."
+          "locationWhenInUsePermission": "EchoLocate needs location to show your position on the offline map.",
+          "locationAlwaysAndWhenInUsePermission": "EchoLocate uses background location for victim beacon continuity.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],

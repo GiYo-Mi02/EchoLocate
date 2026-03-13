@@ -8,17 +8,36 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native";
-import { activateKeepAwakeAsync } from "expo-keep-awake";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { BLEBackgroundService } from "./src/ble/background";
+import { useAppStore } from "./src/state/appStore";
 
 export default function App() {
-  useEffect(() => {
-    // Keep screen on during active rescue operations
-    activateKeepAwakeAsync("echolocate-active");
+  const role = useAppStore((state) => state.role);
+  const initialize = useAppStore((state) => state.initialize);
 
-    // Register background BLE tasks on mount
-    BLEBackgroundService.register();
+  useEffect(() => {
+    void initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    if (role === "rescuer") {
+      void activateKeepAwakeAsync("echolocate-active");
+    } else {
+      deactivateKeepAwake("echolocate-active");
+    }
+
+    return () => {
+      deactivateKeepAwake("echolocate-active");
+    };
+  }, [role]);
+
+  useEffect(() => {
+    void BLEBackgroundService.register();
+    return () => {
+      void BLEBackgroundService.unregister();
+    };
   }, []);
 
   return (

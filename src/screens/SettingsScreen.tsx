@@ -21,10 +21,13 @@ import { useLocation } from "../hooks/useLocation";
 import { useAI } from "../hooks/useAI";
 import { BLEBackgroundService } from "../ble/background";
 import { UI } from "../constants";
+import { useAppStore } from "../state/appStore";
 
 export const SettingsScreen: React.FC = () => {
   const { position } = useLocation();
   const { isModelLoaded, error: aiError } = useAI();
+  const role = useAppStore((state) => state.role);
+  const setRole = useAppStore((state) => state.setRole);
 
   // Tile download state
   const [isDownloading, setIsDownloading] = useState(false);
@@ -112,6 +115,24 @@ export const SettingsScreen: React.FC = () => {
     Alert.alert("Background Stopped", "BLE broadcasting will stop when the app is minimized.");
   }, []);
 
+  const handleSetRole = useCallback(
+    async (nextRole: "rescuer" | "victim") => {
+      await setRole(nextRole);
+      if (nextRole === "rescuer") {
+        Alert.alert(
+          "Rescuer Mode",
+          "Screen stay-awake is enabled to keep map and peer updates visible during active search."
+        );
+      } else {
+        Alert.alert(
+          "Victim Mode",
+          "Screen stay-awake is disabled to preserve battery while background services continue."
+        );
+      }
+    },
+    [setRole]
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -119,6 +140,35 @@ export const SettingsScreen: React.FC = () => {
         contentContainerStyle={styles.content}
       >
         <Text style={styles.title}>Settings</Text>
+
+        {/* Offline Maps Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧭 Operating Role</Text>
+          <Text style={styles.sectionDesc}>
+            Rescuer keeps the display awake for active searching. Victim mode allows the
+            screen to sleep to conserve battery.
+          </Text>
+          <View style={styles.buttonRow}>
+            <BigButton
+              title={role === "rescuer" ? "Rescuer (Active)" : "Set Rescuer"}
+              icon="🛟"
+              variant="primary"
+              onPress={() => {
+                void handleSetRole("rescuer");
+              }}
+              style={styles.halfButton}
+            />
+            <BigButton
+              title={role === "victim" ? "Victim (Active)" : "Set Victim"}
+              icon="🧍"
+              variant="warning"
+              onPress={() => {
+                void handleSetRole("victim");
+              }}
+              style={styles.halfButton}
+            />
+          </View>
+        </View>
 
         {/* Offline Maps Section */}
         <View style={styles.section}>

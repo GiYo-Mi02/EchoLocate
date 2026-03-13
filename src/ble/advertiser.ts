@@ -1,8 +1,9 @@
-// src/ble/advertiser.ts — BLE advertising (Expo Go mock)
+// src/ble/advertiser.ts — BLE payload broadcaster lifecycle
 //
-// Expo Go does not support react-native-ble-plx (requires custom dev build).
-// This module simulates BLE advertising by maintaining an encrypted payload
-// locally. The same API surface is preserved so all hooks/screens work.
+// react-native-ble-plx provides robust scanning/central mode but does not
+// expose peripheral advertising on both platforms. We still keep a native
+// ready payload publisher here so the app can hand off packets to platform
+// specific advertising implementations without changing hooks/screens.
 
 import { BLE } from "../constants";
 import { encryptPayload } from "../crypto/payload";
@@ -20,7 +21,7 @@ export async function startAdvertising(
   getMessage: () => string
 ): Promise<boolean> {
   if (isAdvertising) {
-    console.log("[BLE Advertiser] Already advertising (simulated)");
+    console.log("[BLE Advertiser] Already advertising");
     return true;
   }
 
@@ -48,7 +49,10 @@ export async function startAdvertising(
   advertisingInterval = setInterval(broadcastOnce, BLE.BROADCAST_INTERVAL_MS);
 
   console.log(
-    `[BLE Advertiser] Started (simulated) — interval ${BLE.BROADCAST_INTERVAL_MS}ms`
+    `[BLE Advertiser] Payload publisher active — interval ${BLE.BROADCAST_INTERVAL_MS}ms`
+  );
+  console.warn(
+    "[BLE Advertiser] Native BLE peripheral advertising requires a platform-specific module in the custom dev client"
   );
   return true;
 }

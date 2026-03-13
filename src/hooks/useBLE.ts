@@ -14,9 +14,8 @@ import { startAdvertising, stopAdvertising } from "../ble/advertiser";
 import {
   startScanning,
   stopScanning,
-  onPeersUpdated,
-  getActivePeers,
 } from "../ble/scanner";
+import { useBLEStore } from "../state/bleStore";
 import type { GeoPosition, Peer, PeerStatus } from "../types";
 
 interface UseBLEResult {
@@ -44,7 +43,7 @@ export function useBLE(
   message: string,
   batteryLevel: number
 ): UseBLEResult {
-  const [peers, setPeers] = useState<Peer[]>([]);
+  const peers = useBLEStore((state) => state.peers);
   const [isAdvertisingState, setIsAdvertising] = useState(false);
   const [isScanningState, setIsScanning] = useState(false);
   const [deviceId, setDeviceId] = useState("");
@@ -63,14 +62,6 @@ export function useBLE(
   // Generate device ID on mount
   useEffect(() => {
     generateDeviceId().then(setDeviceId);
-  }, []);
-
-  // Subscribe to peer updates from scanner
-  useEffect(() => {
-    const unsubscribe = onPeersUpdated((updatedPeers) => {
-      setPeers(updatedPeers);
-    });
-    return unsubscribe;
   }, []);
 
   const startBLE = useCallback(async () => {
@@ -101,7 +92,7 @@ export function useBLE(
   // Auto-start once device ID is ready and position is available
   useEffect(() => {
     if (deviceId && position) {
-      startBLE();
+      void startBLE();
     }
     return () => stopBLE();
   }, [deviceId, !!position, startBLE, stopBLE]);
