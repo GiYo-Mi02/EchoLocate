@@ -5,9 +5,12 @@
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
+    "start:dev-client": "expo start --dev-client",
     "prebuild": "expo prebuild",
     "dev:client": "expo start --dev-client",
     "android": "expo run:android",
+    "android:device": "expo run:android --device --no-bundler",
+    "android:install": "adb install -r android/app/build/outputs/apk/debug/app-debug.apk",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit"
   },
