@@ -12,7 +12,13 @@ import * as FileSystem from "expo-file-system/legacy";
 import { MAP } from "../constants";
 import type { TileRegion } from "../types";
 
-const TILE_DIR = `${FileSystem.documentDirectory}${MAP.TILE_CACHE_DIR}/`;
+function getTileDir(): string {
+  const baseDir = FileSystem.documentDirectory;
+  if (!baseDir) {
+    throw new Error("FileSystem.documentDirectory is unavailable");
+  }
+  return `${baseDir}${MAP.TILE_CACHE_DIR}/`;
+}
 
 // ──────────────────────────────────────────────────────────────
 // Tile coordinate math
@@ -58,9 +64,10 @@ function countTiles(
  * Ensure the tile cache directory exists.
  */
 async function ensureTileDir(): Promise<void> {
-  const info = await FileSystem.getInfoAsync(TILE_DIR);
+  const tileDir = getTileDir();
+  const info = await FileSystem.getInfoAsync(tileDir);
   if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(TILE_DIR, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(tileDir, { intermediates: true });
   }
 }
 
@@ -68,7 +75,7 @@ async function ensureTileDir(): Promise<void> {
  * Get the local file path for a tile.
  */
 function tilePath(z: number, x: number, y: number): string {
-  return `${TILE_DIR}${z}/${x}/${y}.png`;
+  return `${getTileDir()}${z}/${x}/${y}.png`;
 }
 
 /**
@@ -130,7 +137,7 @@ export async function downloadRegion(
 
     for (let x = xMin; x <= xMax; x++) {
       // Ensure z/x directory exists
-      const dirPath = `${TILE_DIR}${z}/${x}/`;
+      const dirPath = `${getTileDir()}${z}/${x}/`;
       const dirInfo = await FileSystem.getInfoAsync(dirPath);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
@@ -183,7 +190,7 @@ export async function downloadRegion(
  */
 export async function getCachedRegions(): Promise<string[]> {
   await ensureTileDir();
-  const contents = await FileSystem.readDirectoryAsync(TILE_DIR);
+  const contents = await FileSystem.readDirectoryAsync(getTileDir());
   return contents;
 }
 
@@ -202,9 +209,10 @@ export function estimateTileCount(
  * Delete all cached tiles.
  */
 export async function clearCache(): Promise<void> {
-  const info = await FileSystem.getInfoAsync(TILE_DIR);
+  const tileDir = getTileDir();
+  const info = await FileSystem.getInfoAsync(tileDir);
   if (info.exists) {
-    await FileSystem.deleteAsync(TILE_DIR, { idempotent: true });
+    await FileSystem.deleteAsync(tileDir, { idempotent: true });
   }
   await ensureTileDir();
 }
@@ -213,7 +221,7 @@ export async function clearCache(): Promise<void> {
  * Get total cache size in bytes.
  */
 export async function getCacheSize(): Promise<number> {
-  const info = await FileSystem.getInfoAsync(TILE_DIR);
+  const info = await FileSystem.getInfoAsync(getTileDir());
   if (!info.exists) return 0;
   // FileSystem doesn't directly support recursive size — estimate from region metadata
   return info.size ?? 0;

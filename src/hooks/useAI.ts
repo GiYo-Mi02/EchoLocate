@@ -24,14 +24,18 @@ interface UseAIResult {
   error: string | null;
 }
 
-export function useAI(): UseAIResult {
+export function useAI(autoLoad = true): UseAIResult {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isClassifying, setIsClassifying] = useState(false);
   const [predictions, setPredictions] = useState<TerrainPrediction[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Load model on mount
+  // Load model on mount when enabled by caller.
   useEffect(() => {
+    if (!autoLoad) {
+      return;
+    }
+
     let cancelled = false;
 
     const load = async () => {
@@ -54,11 +58,11 @@ export function useAI(): UseAIResult {
       }
     };
 
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [autoLoad]);
 
   const classify = useCallback(
     async (pixelData: Uint8Array, width: number, height: number) => {

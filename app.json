@@ -43,7 +43,12 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ],
-      "package": "com.giyomi02.echolocate"
+      "package": "com.giyomi02.echolocate",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDummyKeyForNowToPreventCrash_12345"
+        }
+      }
     },
     "plugins": [
       [

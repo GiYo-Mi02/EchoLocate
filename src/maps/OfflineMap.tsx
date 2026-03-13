@@ -14,6 +14,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import MapView, {
+  LocalTile,
   Marker,
   UrlTile,
   Region,
@@ -60,12 +61,32 @@ export const OfflineMap: React.FC<OfflineMapProps> = ({
 
   // Check if we have offline tiles available
   useEffect(() => {
+    let mounted = true;
+
     const checkTiles = async () => {
-      const tileDir = `${FileSystem.documentDirectory}${MAP.TILE_CACHE_DIR}/`;
-      const info = await FileSystem.getInfoAsync(tileDir);
-      setHasOfflineTiles(info.exists);
+      try {
+        const baseDir = FileSystem.documentDirectory;
+        if (!baseDir) {
+          if (mounted) setHasOfflineTiles(false);
+          return;
+        }
+
+        const tileDir = `${baseDir}${MAP.TILE_CACHE_DIR}/`;
+        const info = await FileSystem.getInfoAsync(tileDir);
+        if (mounted) {
+          setHasOfflineTiles(info.exists);
+        }
+      } catch (err) {
+        console.warn("[OfflineMap] Failed to check offline tiles:", err);
+        if (mounted) setHasOfflineTiles(false);
+      }
     };
-    checkTiles();
+
+    void checkTiles();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const initialRegion: Region = userPosition
@@ -84,8 +105,9 @@ export const OfflineMap: React.FC<OfflineMapProps> = ({
       };
 
   // Build the tile URL — use local cache if available, else OSM
-  const tileUrl = hasOfflineTiles
-    ? `${FileSystem.documentDirectory}${MAP.TILE_CACHE_DIR}/{z}/{x}/{y}.png`
+  const baseDir = FileSystem.documentDirectory;
+  const tileUrl = hasOfflineTiles && baseDir
+    ? `${baseDir}${MAP.TILE_CACHE_DIR}/{z}/{x}/{y}.png`
     : MAP.TILE_URL_TEMPLATE;
 
   return (
@@ -100,16 +122,23 @@ export const OfflineMap: React.FC<OfflineMapProps> = ({
         showsCompass={true}
         rotateEnabled={false}
         onRegionChangeComplete={onRegionChange}
-        mapType="none" // We provide our own tiles
+        mapType="standard"
       >
         {/* Tile overlay — offline or online */}
-        <UrlTile
-          urlTemplate={tileUrl}
-          maximumZ={MAP.MAX_ZOOM}
-          minimumZ={MAP.MIN_ZOOM}
-          flipY={false}
-          tileSize={256}
-        />
+        {hasOfflineTiles && baseDir ? (
+          <LocalTile
+            pathTemplate={tileUrl}
+            tileSize={256}
+          />
+        ) : (
+          <UrlTile
+            urlTemplate={tileUrl}
+            maximumZ={MAP.MAX_ZOOM}
+            minimumZ={MAP.MIN_ZOOM}
+            flipY={false}
+            tileSize={256}
+          />
+        )}
 
         {/* User position marker */}
         {userPosition && (

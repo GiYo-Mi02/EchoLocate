@@ -25,7 +25,7 @@ import { useAppStore } from "../state/appStore";
 
 export const SettingsScreen: React.FC = () => {
   const { position } = useLocation();
-  const { isModelLoaded, error: aiError } = useAI();
+  const { isModelLoaded, error: aiError } = useAI(false);
   const role = useAppStore((state) => state.role);
   const setRole = useAppStore((state) => state.setRole);
 
