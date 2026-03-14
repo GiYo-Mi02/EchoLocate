@@ -7,8 +7,8 @@ import { UI } from "../constants";
 import type { Peer, GeoPosition } from "../types";
 import { PeerStatus } from "../types";
 
-// NOTE: You will need a public Mapbox token to render the maps.
-Mapbox.setAccessToken("YOUR_MAPBOX_PUBLIC_TOKEN");
+// Grab the public key from the .env variables where it's safe and won't get committed
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_KEY || "");
 
 interface OfflineMapProps {
   userPosition: GeoPosition | null;
