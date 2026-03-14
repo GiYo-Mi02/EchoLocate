@@ -17,6 +17,12 @@ Built with Expo SDK 54 and configured for an **Expo Custom Dev Client**.
 
 ---
 
+## Full Documentation
+
+- Comprehensive technical documentation: [docs/APPLICATION_DOCUMENTATION.md](docs/APPLICATION_DOCUMENTATION.md)
+
+---
+
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) >= 18

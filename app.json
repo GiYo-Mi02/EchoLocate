@@ -43,14 +43,16 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ],
-      "package": "com.giyomi02.echolocate",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDummyKeyForNowToPreventCrash_12345"
-        }
-      }
+      "package": "com.giyomi02.echolocate"
     },
     "plugins": [
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "YOUR_MAPBOX_SECRET_TOKEN",
+          "RNMapboxMapsVersion": "11.0.0"
+        }
+      ],
       [
         "expo-location",
         {

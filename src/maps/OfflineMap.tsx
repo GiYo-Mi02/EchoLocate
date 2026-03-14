@@ -1,175 +1,72 @@
-// src/maps/OfflineMap.tsx — Offline-capable map component
-//
-// Uses react-native-maps (MapView) with a custom tile overlay that
-// reads from the local tile cache populated by tileManager.ts.
-//
-// When offline, tiles come from expo-file-system's document directory.
-// When online (e.g. during tile download prep), falls back to the
-// standard OSM tile server.
-//
-// Expo gotcha: react-native-maps requires Google Maps API key on Android
-// ONLY if using Google Maps provider. We use the default Apple Maps on iOS
-// and the built-in OSM URL tile overlay for cross-platform offline support.
+// src/maps/OfflineMap.tsx
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
 import { StyleSheet, View, Text } from "react-native";
-import MapView, {
-  LocalTile,
-  Marker,
-  UrlTile,
-  Region,
-  PROVIDER_DEFAULT,
-} from "react-native-maps";
-import * as FileSystem from "expo-file-system/legacy";
-import { MAP, UI } from "../constants";
+import Mapbox from "@rnmapbox/maps";
+import { UI } from "../constants";
 import type { Peer, GeoPosition } from "../types";
 import { PeerStatus } from "../types";
+
+// NOTE: You will need a public Mapbox token to render the maps.
+Mapbox.setAccessToken("YOUR_MAPBOX_PUBLIC_TOKEN");
 
 interface OfflineMapProps {
   userPosition: GeoPosition | null;
   peers: Peer[];
-  onRegionChange?: (region: Region) => void;
+  onRegionChange?: (region: any) => void;
 }
 
-/** Map PeerStatus to marker color */
 function statusColor(status: PeerStatus): string {
   switch (status) {
-    case PeerStatus.OK:
-      return UI.COLORS.success;
-    case PeerStatus.NEED_HELP:
-      return UI.COLORS.warning;
-    case PeerStatus.INJURED:
-      return UI.COLORS.accent;
-    case PeerStatus.CRITICAL:
-      return UI.COLORS.danger;
-    case PeerStatus.SHELTER:
-      return UI.COLORS.primary;
-    case PeerStatus.MOVING:
-      return UI.COLORS.text;
-    default:
-      return UI.COLORS.textDim;
+    case PeerStatus.OK: return UI.COLORS.success;
+    case PeerStatus.NEED_HELP: return UI.COLORS.warning;
+    case PeerStatus.INJURED: return UI.COLORS.accent;
+    case PeerStatus.CRITICAL: return UI.COLORS.danger;
+    case PeerStatus.SHELTER: return UI.COLORS.primary;
+    case PeerStatus.MOVING: return UI.COLORS.text;
+    default: return UI.COLORS.textDim;
   }
 }
 
-export const OfflineMap: React.FC<OfflineMapProps> = ({
-  userPosition,
-  peers,
-  onRegionChange,
-}) => {
-  const mapRef = useRef<MapView>(null);
-  const [hasOfflineTiles, setHasOfflineTiles] = useState(false);
-
-  // Check if we have offline tiles available
-  useEffect(() => {
-    let mounted = true;
-
-    const checkTiles = async () => {
-      try {
-        const baseDir = FileSystem.documentDirectory;
-        if (!baseDir) {
-          if (mounted) setHasOfflineTiles(false);
-          return;
-        }
-
-        const tileDir = `${baseDir}${MAP.TILE_CACHE_DIR}/`;
-        const info = await FileSystem.getInfoAsync(tileDir);
-        if (mounted) {
-          setHasOfflineTiles(info.exists);
-        }
-      } catch (err) {
-        console.warn("[OfflineMap] Failed to check offline tiles:", err);
-        if (mounted) setHasOfflineTiles(false);
-      }
-    };
-
-    void checkTiles();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const initialRegion: Region = userPosition
-    ? {
-        latitude: userPosition.latitude,
-        longitude: userPosition.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }
-    : {
-        // Default: center of US
-        latitude: 39.8283,
-        longitude: -98.5795,
-        latitudeDelta: 30,
-        longitudeDelta: 30,
-      };
-
-  // Build the tile URL — use local cache if available, else OSM
-  const baseDir = FileSystem.documentDirectory;
-  const tileUrl = hasOfflineTiles && baseDir
-    ? `${baseDir}${MAP.TILE_CACHE_DIR}/{z}/{x}/{y}.png`
-    : MAP.TILE_URL_TEMPLATE;
+export const OfflineMap: React.FC<OfflineMapProps> = ({ userPosition, peers }) => {
+  // Mapbox handles offline map packs natively if configured
+  const [offline] = useState(false);
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_DEFAULT}
-        initialRegion={initialRegion}
-        showsUserLocation={!!userPosition}
-        showsMyLocationButton={true}
-        showsCompass={true}
-        rotateEnabled={false}
-        onRegionChangeComplete={onRegionChange}
-        mapType="standard"
-      >
-        {/* Tile overlay — offline or online */}
-        {hasOfflineTiles && baseDir ? (
-          <LocalTile
-            pathTemplate={tileUrl}
-            tileSize={256}
-          />
-        ) : (
-          <UrlTile
-            urlTemplate={tileUrl}
-            maximumZ={MAP.MAX_ZOOM}
-            minimumZ={MAP.MIN_ZOOM}
-            flipY={false}
-            tileSize={256}
-          />
-        )}
+      <Mapbox.MapView style={styles.map}>
+        <Mapbox.Camera
+          zoomLevel={14}
+          centerCoordinate={
+            userPosition
+              ? [userPosition.longitude, userPosition.latitude]
+              : [-98.5795, 39.8283] // Default to center of US
+          }
+        />
 
         {/* User position marker */}
         {userPosition && (
-          <Marker
-            coordinate={{
-              latitude: userPosition.latitude,
-              longitude: userPosition.longitude,
-            }}
-            title="You"
-            description={`Accuracy: ${userPosition.accuracy}m`}
-            pinColor={UI.COLORS.accent}
-          />
+          <Mapbox.PointAnnotation
+            id="userLocation"
+            coordinate={[userPosition.longitude, userPosition.latitude]}
+          >
+            <View style={styles.userMarker} />
+          </Mapbox.PointAnnotation>
         )}
 
         {/* Peer markers */}
         {peers.map((peer) => (
-          <Marker
+          <Mapbox.PointAnnotation
             key={peer.deviceId}
-            coordinate={{
-              latitude: peer.position.latitude,
-              longitude: peer.position.longitude,
-            }}
-            title={peer.name}
-            description={`${PeerStatus[peer.status]} • ${peer.estimatedDistance}m away • Battery: ${peer.batteryLevel}%${peer.message ? ` • "${peer.message}"` : ""}`}
-            pinColor={statusColor(peer.status)}
-          />
+            id={peer.deviceId}
+            coordinate={[peer.position.longitude, peer.position.latitude]}
+          >
+            <View style={[styles.peerMarker, { backgroundColor: statusColor(peer.status) }]} />
+          </Mapbox.PointAnnotation>
         ))}
-      </MapView>
+      </Mapbox.MapView>
 
-      {/* Offline indicator */}
-      {hasOfflineTiles && (
+      {offline && (
         <View style={styles.offlineBadge}>
           <Text style={styles.offlineText}>OFFLINE MAP</Text>
         </View>
@@ -179,11 +76,22 @@ export const OfflineMap: React.FC<OfflineMapProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  map: { flex: 1 },
+  userMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: UI.COLORS.accent,
+    borderWidth: 3,
+    borderColor: "white",
   },
-  map: {
-    flex: 1,
+  peerMarker: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "white",
   },
   offlineBadge: {
     position: "absolute",
@@ -201,3 +109,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
+
