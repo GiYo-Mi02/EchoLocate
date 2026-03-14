@@ -5,6 +5,7 @@
 
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import { AppState } from "react-native";
 import { BLE as BLE_CONST, TASKS } from "../constants";
 import type { GeoPosition, PeerStatus } from "../types";
 
@@ -61,6 +62,13 @@ export function updateBackgroundState(state: {
 export const BLEBackgroundService = {
   async register(): Promise<void> {
     try {
+      if (AppState.currentState !== "active") {
+        console.warn(
+          "[BG Service] Skipped registration because app is not in foreground"
+        );
+        return;
+      }
+
       const fg = await Location.requestForegroundPermissionsAsync();
       if (fg.status !== "granted") {
         console.warn("[BG Service] Foreground location permission denied");
@@ -95,6 +103,13 @@ export const BLEBackgroundService = {
 
       console.log("[BG Service] Background location updates started");
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("Foreground service cannot be started")) {
+        console.warn(
+          "[BG Service] Register while app is foregrounded, then background the app"
+        );
+        return;
+      }
       console.error("[BG Service] Registration failed:", err);
     }
   },

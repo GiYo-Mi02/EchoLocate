@@ -28,6 +28,13 @@ interface UseBLEResult {
   peerCount: number;
 }
 
+// Shared BLE session across all hook consumers/screens.
+let sharedDeviceId = "";
+let sharedDeviceIdPromise: Promise<string> | null = null;
+let sharedIsAdvertising = false;
+let sharedIsScanning = false;
+let sharedConsumers = 0;
+
 /**
  * Generate a stable device identifier.
  * Uses expo-crypto for random bytes, stored for session duration.
@@ -46,7 +53,7 @@ export function useBLE(
   const peers = useBLEStore((state) => state.peers);
   const [isAdvertisingState, setIsAdvertising] = useState(false);
   const [isScanningState, setIsScanning] = useState(false);
-  const [deviceId, setDeviceId] = useState("");
+  const [deviceId, setDeviceId] = useState(sharedDeviceId);
 
   // Refs to give closures access to latest values
   const posRef = useRef(position);
@@ -59,43 +66,91 @@ export function useBLE(
   msgRef.current = message;
   batteryRef.current = batteryLevel;
 
-  // Generate device ID on mount
+  // Generate one shared device ID for the whole app session.
   useEffect(() => {
-    generateDeviceId().then(setDeviceId);
+    let cancelled = false;
+
+    const ensureDeviceId = async () => {
+      if (sharedDeviceId) {
+        if (!cancelled) {
+          setDeviceId(sharedDeviceId);
+        }
+        return;
+      }
+
+      if (!sharedDeviceIdPromise) {
+        sharedDeviceIdPromise = generateDeviceId();
+      }
+
+      const id = await sharedDeviceIdPromise;
+      sharedDeviceId = id;
+      sharedDeviceIdPromise = null;
+
+      if (!cancelled) {
+        setDeviceId(id);
+      }
+    };
+
+    void ensureDeviceId();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startBLE = useCallback(async () => {
-    if (!deviceId) return;
+    const activeDeviceId = sharedDeviceId || deviceId;
+    if (!activeDeviceId) return;
 
-    // Start advertising
-    const advStarted = await startAdvertising(
-      deviceId,
-      () => posRef.current,
-      () => statusRef.current,
-      () => batteryRef.current,
-      () => msgRef.current
-    );
-    setIsAdvertising(advStarted);
+    // Start advertising once for all consumers.
+    if (!sharedIsAdvertising) {
+      sharedIsAdvertising = await startAdvertising(
+        activeDeviceId,
+        () => posRef.current,
+        () => statusRef.current,
+        () => batteryRef.current,
+        () => msgRef.current
+      );
+    }
 
-    // Start scanning
-    const scanStarted = await startScanning();
-    setIsScanning(scanStarted);
+    // Start scanning once for all consumers.
+    if (!sharedIsScanning) {
+      sharedIsScanning = await startScanning();
+    }
+
+    setIsAdvertising(sharedIsAdvertising);
+    setIsScanning(sharedIsScanning);
   }, [deviceId]);
 
   const stopBLE = useCallback(() => {
+    // Manual hard stop.
     stopAdvertising();
     stopScanning();
+    sharedIsAdvertising = false;
+    sharedIsScanning = false;
     setIsAdvertising(false);
     setIsScanning(false);
   }, []);
 
-  // Auto-start once device ID is ready and position is available
+  // Track hook consumers to avoid tearing down BLE when switching screens.
+  useEffect(() => {
+    sharedConsumers += 1;
+    return () => {
+      sharedConsumers = Math.max(0, sharedConsumers - 1);
+      if (sharedConsumers === 0) {
+        stopAdvertising();
+        stopScanning();
+        sharedIsAdvertising = false;
+        sharedIsScanning = false;
+      }
+    };
+  }, []);
+
+  // Auto-start once shared device ID is ready and position is available.
   useEffect(() => {
     if (deviceId && position) {
       void startBLE();
     }
-    return () => stopBLE();
-  }, [deviceId, !!position, startBLE, stopBLE]);
+  }, [deviceId, !!position, startBLE]);
 
   return {
     peers,
