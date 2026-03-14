@@ -47,13 +47,6 @@
     },
     "plugins": [
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsDownloadToken": "YOUR_MAPBOX_SECRET_TOKEN",
-          "RNMapboxMapsVersion": "11.0.0"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationWhenInUsePermission": "EchoLocate needs location to show your position on the offline map.",
